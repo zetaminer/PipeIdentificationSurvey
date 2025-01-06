@@ -13,19 +13,27 @@ def dynamic_brightness_contrast(image, roi):
     """
     Allows dynamic adjustment of brightness and contrast using trackbars.
     """
+    adjusted_image = image.copy()
+
     def update_brightness_contrast(_):
-        # Get current positions of trackbars
+        # Safely get the positions of the trackbars
+        if cv2.getWindowProperty('Brightness & Contrast', cv2.WND_PROP_VISIBLE) < 1:
+            return
         alpha = cv2.getTrackbarPos('Contrast', 'Brightness & Contrast') / 10  # Scale for contrast
         beta = cv2.getTrackbarPos('Brightness', 'Brightness & Contrast') - 100  # Scale for brightness
+
         # Apply brightness and contrast adjustments
-        adjusted = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+        nonlocal adjusted_image
+        adjusted_image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+
         # Crop the ROI
         x, y, w, h = roi
-        cropped = adjusted[y:y+h, x:x+w]
+        cropped = adjusted_image[y:y+h, x:x+w]
+
         # Display the adjusted ROI
         cv2.imshow('Brightness & Contrast', cropped)
 
-    # Create the window before creating trackbars
+    # Create the window for displaying adjustments
     cv2.namedWindow('Brightness & Contrast')
 
     # Initialize trackbars for contrast and brightness
@@ -36,8 +44,16 @@ def dynamic_brightness_contrast(image, roi):
     update_brightness_contrast(0)
 
     # Wait until the user presses a key
-    cv2.waitKey(0)
+    while True:
+        key = cv2.waitKey(1)
+        if key == 27:  # Escape key to exit
+            break
+
     cv2.destroyAllWindows()
+
+    return adjusted_image
+
+
 
 
 def adjust_brightness_contrast(image, alpha=2.0, beta=50, roi=None):
