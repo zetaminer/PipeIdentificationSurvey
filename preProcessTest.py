@@ -11,49 +11,40 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 
 def dynamic_brightness_contrast(image, roi):
     """
-    Allows dynamic adjustment of brightness and contrast using trackbars.
+    Allows dynamic adjustment of brightness and contrast using trackbars with dummy callbacks
+    until both trackbars are in place. The actual update is done in a loop.
     """
+    # Dummy callback that does nothing
+    def nothing(_):
+        pass
+
+    # Make a copy so the original remains unchanged
     adjusted_image = image.copy()
-
-
-    def update_brightness_contrast(_=None):
-        """
-        Update the brightness and contrast dynamically based on trackbar values.
-        """
-        try:
-            # Safely get the positions of the trackbars
-
-            alpha = cv2.getTrackbarPos('Contrast', 'Brightness & Contrast') / 10  # Scale for contrast
-            beta = cv2.getTrackbarPos('Brightness', 'Brightness & Contrast') - 100  # Scale for brightness
-
-            # Apply brightness and contrast adjustments
-            nonlocal adjusted_image
-            adjusted_image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
-
-            # Crop the ROI for display
-            x, y, w, h = roi
-            cropped = adjusted_image[y:y+h, x:x+w]
-
-            # Display the adjusted ROI
-            cv2.imshow('Brightness & Contrast', cropped)
-        except cv2.error as e:
-            print("OpenCV error occurred:", e)
-            return
 
     # Create the window for display
     cv2.namedWindow('Brightness & Contrast', cv2.WINDOW_AUTOSIZE)
 
+    # Create trackbars for contrast and brightness, both using the dummy callback
+    cv2.createTrackbar('Contrast', 'Brightness & Contrast', 10, 30, nothing)     # Default = 1.0
+    cv2.createTrackbar('Brightness', 'Brightness & Contrast', 100, 200, nothing) # Default = 0
 
-    # Create trackbars for contrast and brightness
-    cv2.createTrackbar('Contrast', 'Brightness & Contrast', 10, 30, update_brightness_contrast)  # Default = 1.0
-    cv2.createTrackbar('Brightness', 'Brightness & Contrast', 100, 200, update_brightness_contrast)  # Default = 0
-
-    # Trigger the first update manually to initialize the display
-    update_brightness_contrast()
-
-    # Wait until the user presses a key to finalize adjustments
     while True:
-        key = cv2.waitKey(1)
+        # Read the trackbar positions on each loop iteration
+        alpha = cv2.getTrackbarPos('Contrast', 'Brightness & Contrast') / 10.0    # Scale for contrast
+        beta = cv2.getTrackbarPos('Brightness', 'Brightness & Contrast') - 100    # Scale for brightness
+
+        # Apply brightness and contrast adjustments
+        adjusted_image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+
+        # Crop the ROI for display
+        x, y, w, h = roi
+        cropped = adjusted_image[y:y+h, x:x+w]
+
+        # Display the adjusted ROI
+        cv2.imshow('Brightness & Contrast', cropped)
+
+        # Press ESC to finalize/exit
+        key = cv2.waitKey(1) & 0xFF
         if key == 27:  # Escape key
             break
 
@@ -61,6 +52,7 @@ def dynamic_brightness_contrast(image, roi):
     cv2.destroyAllWindows()
 
     return adjusted_image
+
 
 
 
